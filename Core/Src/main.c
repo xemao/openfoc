@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -68,7 +68,7 @@ void blinkLED();
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  float floc = 2.34;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/

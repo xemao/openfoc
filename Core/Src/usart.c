@@ -21,7 +21,7 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-
+#include <stdio.h>
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart2;
@@ -32,7 +32,9 @@ void MX_USART2_UART_Init(void)
 {
 
   /* USER CODE BEGIN USART2_Init 0 */
-
+  // 设置buffer缓存为0，这样一有数据就发送，不然会等到缓存满或有回车换行符才发送。
+  // 如果没有这句，你的printf又没\n，log就会打不出来。
+  setvbuf(stdout, NULL, _IONBF, 0);   // 作者：三哥与林雨 https://www.bilibili.com/read/cv12222811
   /* USER CODE END USART2_Init 0 */
 
   /* USER CODE BEGIN USART2_Init 1 */
@@ -110,5 +112,17 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
+// printf重定向
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+PUTCHAR_PROTOTYPE
+{
+  HAL_UART_Transmit(&huart2, (uint8_t *) &ch, 1, 0xFFFF);
+  return ch;
+}
 
 /* USER CODE END 1 */
