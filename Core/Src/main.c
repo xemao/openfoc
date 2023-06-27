@@ -25,6 +25,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdlib.h>
+#include "BLDCMotor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,27 +41,30 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+void commander_run(void);
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+float target = 20;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+void commander_run(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void systick_CountMode(void)
+{
+  SysTick->LOAD = 0xFFFFFF-1;      //set reload register
+  SysTick->VAL  = 0;
+  SysTick->CTRL = SysTick_CTRL_ENABLE_Msk; //Enable SysTick Timer
+}
 /* USER CODE END 0 */
-
-void blinkLED();
 
 /**
   * @brief  The application entry point.
@@ -68,7 +73,7 @@ void blinkLED();
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  float floc = 2.34;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -93,23 +98,28 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  controller = Type_velocity_openloop;
+  voltage_power_supply = 12;  // 电压
+  // 大功率航模电机设置的小一点0.5-1；小功率云台电机设置的大一点1-3
+  voltage_limit = 0.7;        // V，最大值需小于12/1.732=6.9
+  velocity_limit = 20;        // rad/s angleOpenloop() use it
+  pole_pairs = 7;             // 极对数
+
+  systick_CountMode();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    blinkLED();
+    move(target);
+    commander_run();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
-}
-
-void blinkLED() {
-  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-  HAL_Delay(350);
 }
 
 /**
@@ -158,6 +168,24 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void commander_run(void)
+{
+  if((USART_RX_STA&0x8000)!=0)
+  {
+    switch(USART_RX_BUF[0])
+    {
+      case 'H':
+        printf("Hello World!\r\n");
+        break;
+      case 'T':   //T6.28
+        target=atof((const char *)(USART_RX_BUF+1));
+        printf("RX=%.4f\r\n", target);
+        break;
+    }
+    USART_RX_STA=0;
+  }
+}
 
 /* USER CODE END 4 */
 

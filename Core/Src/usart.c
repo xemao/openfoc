@@ -22,6 +22,9 @@
 
 /* USER CODE BEGIN 0 */
 #include <stdio.h>
+
+unsigned char USART_RX_BUF[USART_REC_LEN];  //接收缓冲，usart.h中定义长度
+unsigned short USART_RX_STA=0;              //接收状态标志
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart2;
@@ -32,9 +35,9 @@ void MX_USART2_UART_Init(void)
 {
 
   /* USER CODE BEGIN USART2_Init 0 */
-  // 设置buffer缓存为0，这样一有数据就发送，不然会等到缓存满或有回车换行符才发送。
-  // 如果没有这句，你的printf又没\n，log就会打不出来。
-  setvbuf(stdout, NULL, _IONBF, 0);   // 作者：三哥与林雨 https://www.bilibili.com/read/cv12222811
+  // 设置buffer缓存清0，这样一有数据就发，不然会等到缓存满或有回车换行符才发
+  // 如果没有这句，你的printf又没\n，log就会打不出来
+  setvbuf(stdout, NULL, _IONBF, 0);   // 作者：三哥与林https://www.bilibili.com/read/cv12222811
   /* USER CODE END USART2_Init 0 */
 
   /* USER CODE BEGIN USART2_Init 1 */
@@ -82,6 +85,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+    /* USART2 interrupt Init */
+    HAL_NVIC_SetPriority(USART2_IRQn, 3, 2);
+    HAL_NVIC_EnableIRQ(USART2_IRQn);
   /* USER CODE BEGIN USART2_MspInit 1 */
 
   /* USER CODE END USART2_MspInit 1 */
@@ -105,6 +111,8 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     */
     HAL_GPIO_DeInit(GPIOA, DEBUG_Tx_Pin|DEBUG_Rx_Pin);
 
+    /* USART2 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(USART2_IRQn);
   /* USER CODE BEGIN USART2_MspDeInit 1 */
 
   /* USER CODE END USART2_MspDeInit 1 */
@@ -112,7 +120,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
-// printf重定向
+// printf重定�?
 #ifdef __GNUC__
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 #else

@@ -35,7 +35,7 @@ extern "C" {
 extern TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN Private defines */
-
+#define PWM_Period  1680
 /* USER CODE END Private defines */
 
 void MX_TIM1_Init(void);
@@ -51,4 +51,3 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 #endif
 
 #endif /* __TIM_H__ */
-

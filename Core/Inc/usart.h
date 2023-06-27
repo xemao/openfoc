@@ -35,7 +35,10 @@ extern "C" {
 extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN Private defines */
+#define USART_REC_LEN 256
 
+extern unsigned char USART_RX_BUF[USART_REC_LEN];
+extern unsigned short USART_RX_STA;
 /* USER CODE END Private defines */
 
 void MX_USART2_UART_Init(void);
@@ -49,4 +52,3 @@ void MX_USART2_UART_Init(void);
 #endif
 
 #endif /* __USART_H__ */
-

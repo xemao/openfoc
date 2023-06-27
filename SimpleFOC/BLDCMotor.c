@@ -1,5 +1,6 @@
 
 #include "BLDCMotor.h"
+#include "tim.h"
 
 /************************************************
 main中调用的接口函数都在当前文件中
@@ -60,15 +61,15 @@ void setPhaseVoltage(float Uq, float Ud, float angle_el)
     // only necessary if using _sin and _cos - approximation functions
     angle_el = _normalizeAngle(angle_el + _PI_2);
   }
-  if(Uout> 0.577)Uout= 0.577;
-  if(Uout<-0.577)Uout=-0.577;
+  if(Uout> 0.577)Uout = 0.577;
+  if(Uout< -0.577)Uout = -0.577;
 
   sector = (angle_el / _PI_3) + 1;
   T1 = _SQRT3*_sin(sector*_PI_3 - angle_el) * Uout;
   T2 = _SQRT3*_sin(angle_el - (sector-1.0)*_PI_3) * Uout;
   T0 = 1 - T1 - T2;
 
-  // calculate the duty cycles(times)
+  // 计算占空比(times)
   switch(sector)
   {
     case 1:
@@ -106,10 +107,20 @@ void setPhaseVoltage(float Uq, float Ud, float angle_el)
       Tb = 0;
       Tc = 0;
   }
-
 //  TIM_SetCompare1(TIM2,Ta*PWM_Period);
 //  TIM_SetCompare2(TIM2,Tb*PWM_Period);
 //  TIM_SetCompare3(TIM2,Tc*PWM_Period);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, Tc*PWM_Period);     // w--c
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, Tb*PWM_Period);     // v--b
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
+
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, Ta*PWM_Period);     // u--a
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
 }
 
 /*开环速度*****************************************************************************/
@@ -120,12 +131,12 @@ float velocityOpenloop(float target_velocity)
 
   now_us = SysTick->VAL; //_micros();
   if(now_us<open_loop_timestamp)
-    Ts = (float)(open_loop_timestamp - now_us)/9*1e-6;
+    Ts = (float)(open_loop_timestamp - now_us)/21*1e-6;
   else
-    Ts = (float)(0xFFFFFF - now_us + open_loop_timestamp)/9*1e-6;
+    Ts = (float)(0xFFFFFF - now_us + open_loop_timestamp)/21*1e-6;
   open_loop_timestamp = now_us;  // save timestamp for next call 保存下一次调用的时间戳
   // quick fix for strange cases (micros overflow) 快速修复奇怪的情况(micros溢出)
-  if(Ts == 0 || Ts > 0.5) Ts = 1e-3; 
+  if(Ts == 0 || Ts > 0.5) Ts = 1e-3;
 
   // calculate the necessary angle to achieve target velocity 计算达到目标速度所需的角度
   shaft_angle = _normalizeAngle(shaft_angle + target_velocity*Ts); 
@@ -139,34 +150,34 @@ float velocityOpenloop(float target_velocity)
 /******************************************************************************/
 float angleOpenloop(float target_angle)
 {
-	unsigned long now_us;
-	float Ts,Uq;
-	
-	now_us = SysTick->VAL; //_micros();
-	if(now_us<open_loop_timestamp)Ts = (float)(open_loop_timestamp - now_us)/9*1e-6;
-	else
-		Ts = (float)(0xFFFFFF - now_us + open_loop_timestamp)/9*1e-6;
+  unsigned long now_us;
+  float Ts,Uq;
+
+  now_us = SysTick->VAL; //_micros();
+  if(now_us<open_loop_timestamp)Ts = (float)(open_loop_timestamp - now_us)/9*1e-6;
+  else
+    Ts = (float)(0xFFFFFF - now_us + open_loop_timestamp)/9*1e-6;
   open_loop_timestamp = now_us;  //save timestamp for next call
   // quick fix for strange cases (micros overflow)
-  if(Ts == 0 || Ts > 0.5) Ts = 1e-3; 
-	
-	// calculate the necessary angle to move from current position towards target angle
+  if(Ts == 0 || Ts > 0.5) Ts = 1e-3;
+
+  // calculate the necessary angle to move from current position towards target angle
   // with maximal velocity (velocity_limit)
   if(fabs( target_angle - shaft_angle ) > velocity_limit*Ts)
-	{
+  {
     shaft_angle += _sign(target_angle - shaft_angle) * velocity_limit * Ts;
     //shaft_velocity = velocity_limit;
   }
-	else
-	{
+  else
+  {
     shaft_angle = target_angle;
     //shaft_velocity = 0;
   }
-	
-	Uq = voltage_limit;
-	// set the maximal allowed voltage (voltage_limit) with the necessary angle
-	setPhaseVoltage(Uq,  0, _electricalAngle(shaft_angle, pole_pairs));
-	
+
+  Uq = voltage_limit;
+  // set the maximal allowed voltage (voltage_limit) with the necessary angle
+  setPhaseVoltage(Uq,  0, _electricalAngle(shaft_angle, pole_pairs));
+
   return Uq;
 }
 /******************************************************************************/

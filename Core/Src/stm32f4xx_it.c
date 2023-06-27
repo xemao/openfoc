@@ -22,6 +22,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,7 +56,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -197,6 +198,47 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f4xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  unsigned char Res;
+  /* USER CODE BEGIN USART2_IRQn 0 */
+  if(__HAL_UART_GET_IT_SOURCE(&huart2, UART_IT_RXNE) != RESET)
+  {
+    Res = (uint16_t)(huart2.Instance->DR & (uint16_t)0x01FF);	//读取接收到的字节
+
+    if((USART_RX_STA&0x8000)==0)    //接收未完成
+    {
+      if(USART_RX_STA&0x4000)       //接收到了0x0d
+      {
+        if(Res!=0x0a)USART_RX_STA=0;   //接收错误，重新开始
+        else
+        {
+          USART_RX_STA|=0x8000;	       //接收完成
+          USART_RX_BUF[USART_RX_STA&0X3FFF]='\0';   //最后一个字节放'0’，方便判断
+        }
+      }
+      else //还没收到0x0D
+      {
+        if(Res==0x0d)USART_RX_STA|=0x4000;
+        else
+        {
+          USART_RX_BUF[USART_RX_STA&0X3FFF]=Res;
+          USART_RX_STA++;
+          if(USART_RX_STA>(USART_REC_LEN-1))USART_RX_STA=0;  //接收错误，重新开始
+        }
+      }
+    }
+  }
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
+}
 
 /* USER CODE BEGIN 1 */
 
